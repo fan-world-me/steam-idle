@@ -1,0 +1,5 @@
+services:
+  - type: worker
+    name: steam-idle
+    runtime: node
+    startCommand: npm start
