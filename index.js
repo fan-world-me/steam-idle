@@ -36,7 +36,7 @@ client.on('loginKey', (key) => {
 client.on('loggedOn', () => {
     console.log('[' + new Date().toLocaleTimeString() + '] Залогинился в Steam!');
     client.gamesPlayed([570, 730]); // Dota 2 + CS2
-    console.log('[' + new Date().toLocaleTimeString() + '] CS2 запущена, часы идут...');
+    console.log('[' + new Date().toLocaleTimeString() + '] Dota 2 и CS2 запущены, часы идут...');
     
     if (reconnectTimeout) clearTimeout(reconnectTimeout);
 });

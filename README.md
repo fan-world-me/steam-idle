@@ -1,19 +1,22 @@
 # steam-idle
 
-A simple Steam hour booster script using steam-user.
+A simple Steam hour booster script using `steam-user`.
 
-## Description
-This script logs into your Steam account and "plays" a specified game (default: Dota 2) to increase the hours played.
+## What it does
+The script logs into your Steam account and idles two games at once:
+- Dota 2 (`570`)
+- CS2 (`730`)
 
 ## Setup
-1. Clone the repository.
-2. Run 
-pm install.
-3. Set environment variables:
-   - STEAM_LOGIN: Your Steam username.
-   - STEAM_PASSWORD: Your Steam password.
-4. Run 
-pm start.
+1. Create a local `steam-auth.json` file with your Steam login and password.
+2. Install dependencies:
+   ```bash
+   npm install
+   ```
+3. Start the bot:
+   ```bash
+   npm start
+   ```
 
 ## License
-This project is licensed under the GPL 3.0 License - see the [LICENSE](LICENSE) file for details.
+This project is licensed under **GPL-3.0-only**. See the [LICENSE](LICENSE) file for details.
