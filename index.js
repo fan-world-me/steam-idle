@@ -137,7 +137,6 @@ client.on('loggedOn', () => {
         reconnectTimeout = null;
     }
     reconnectDelay = 5000; // сброс backoff после успешного входа
-    isBlocked = false;     // сбрасываем паузу — playingState сам скажет если надо
     log('Залогинился успешно!');
     startIdling();
 });
