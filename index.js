@@ -7,6 +7,7 @@ let reconnectTimeout = null;
 let isBlocked = false;
 let reconnectDelay = 5000;    // начинаем с 5 сек
 const MAX_RECONNECT_DELAY = 60000; // не чаще раза в минуту при повторных ошибках
+let retryIdleTimeout = null;  // повтор попытки накрутки если пауза не снялась сама
 
 // Конфиг: читаем из steam-auth.json или переменных окружения
 const configPath = path.join(__dirname, 'steam-auth.json');
@@ -75,10 +76,24 @@ function scheduleReconnect() {
 function startIdling() {
     if (isBlocked) {
         log('Накрутка на паузе (ты сейчас играешь), жду...');
+        scheduleRetryIdle();
         return;
     }
+    if (retryIdleTimeout) { clearTimeout(retryIdleTimeout); retryIdleTimeout = null; }
     client.gamesPlayed(gamesToIdle);
     log('Накручиваю часы в играх: ' + gamesToIdle.join(', '));
+}
+
+// Если Steam не прислал "разблокировано" — пробуем сами через 5 минут
+function scheduleRetryIdle() {
+    if (retryIdleTimeout) return; // уже запланировано
+    retryIdleTimeout = setTimeout(() => {
+        retryIdleTimeout = null;
+        if (!isBlocked) return; // уже разблокировались через событие
+        log('Повторная попытка накрутки (Steam мог не прислать разблокировку)...');
+        isBlocked = false;
+        startIdling();
+    }, 5 * 60 * 1000); // 5 минут
 }
 
 // --- Подключение ---
@@ -151,6 +166,7 @@ client.on('playingState', (blocked, playingApp) => {
     } else if (!blocked && isBlocked) {
         log('Ты закрыл игру на ПК — возобновляю накрутку');
         isBlocked = false;
+        if (retryIdleTimeout) { clearTimeout(retryIdleTimeout); retryIdleTimeout = null; }
         startIdling();
     }
     // blocked=false при входе и isBlocked=false → игнорируем (Steam шлёт это всегда при логине)
@@ -189,6 +205,7 @@ client.on('disconnected', () => {
 function shutdown() {
     log('Завершаю работу...');
     if (reconnectTimeout) clearTimeout(reconnectTimeout);
+    if (retryIdleTimeout) clearTimeout(retryIdleTimeout);
     client.logOff();
     setTimeout(() => process.exit(0), 1500);
 }
