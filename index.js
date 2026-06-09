@@ -21,6 +21,7 @@ const savedPassword = process.env.STEAM_PASSWORD || config.password;
 const loginOptions = {
     accountName: process.env.STEAM_ACCOUNT || config.accountName,
     password: savedPassword,
+    rememberPassword: true, // без этого steam-user v4 не сохраняет loginKey
 };
 
 // Список игр: из конфига, или дефолт Dota 2 + CS2
