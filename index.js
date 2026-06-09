@@ -74,28 +74,36 @@ function startIdling() {
 log('Подключаюсь к Steam...');
 client.logOn(loginOptions);
 
-// ФИКС: Steam Guard на сервере — readline зависнет, поэтому детектим есть ли stdin
-client.on('steamGuard', (domain, callback) => {
-    const isInteractive = process.stdin.isTTY;
+// Steam Guard — один промт за раз, предотвращаем дублирование
+let guardActive = false;
 
-    if (!isInteractive) {
-        // На сервере нет терминала — не можем ввести код
+client.on('steamGuard', (domain, callback) => {
+    if (!process.stdin.isTTY) {
         log('[ОШИБКА] Нужен Steam Guard, но бот запущен на сервере без терминала.');
         log('Сначала запусти локально, введи код, дождись "Ключ входа сохранён", потом деплой.');
         process.exit(1);
     }
 
+    // Steam может вызвать steamGuard несколько раз пока ждём ввод — игнорируем повторы
+    if (guardActive) {
+        log('Steam повторно запросил Guard — жди пока подтвердишь в приложении...');
+        return;
+    }
+
+    guardActive = true;
     const readline = require('readline');
     const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
+
     let prompt;
     if (domain) {
-        prompt = 'Введи код из письма на ' + domain + ': ';
+        prompt = '\nВведи код из письма на ' + domain + ': ';
     } else {
-        prompt = 'Введи код из Steam Guard (или просто Enter если подтверждаешь в приложении на телефоне): ';
+        prompt = '\n  Если подтверждаешь через телефон:\n  1. Открой Steam на телефоне → нажми "Подтвердить вход"\n  2. После подтверждения нажми Enter здесь\n\n  Если вводишь код из Steam Guard: введи код и нажми Enter\n\n> ';
     }
+
     rl.question(prompt, (code) => {
         rl.close();
-        // Пустой код = ждём подтверждения в мобильном приложении Steam
+        guardActive = false;
         callback(code.trim());
     });
 });
