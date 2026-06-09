@@ -1,4 +1,4 @@
-app = "steam-idle"
+app = "steam-idle-yarik"
 primary_region = "fra"
 
 [build]
