@@ -1,11 +1,10 @@
-[app]
-name = "steam-idle"
+app = "steam-idle"
 primary_region = "fra"
 
 [build]
   dockerfile = "Dockerfile"
 
-# STEAM_ACCOUNT и STEAM_PASSWORD задай через:
+# Секреты задай через:
 #   fly secrets set STEAM_ACCOUNT=логин STEAM_PASSWORD=пароль
 
 [[vm]]
@@ -16,7 +15,7 @@ primary_region = "fra"
 [deploy]
   strategy = "immediate"
 
-# Постоянное хранилище для ssfn.json (loginKey)
+# Персистентное хранилище для ssfn.json (loginKey)
 # Создать один раз: fly volumes create steam_data --region fra --size 1
 [mounts]
   source = "steam_data"
