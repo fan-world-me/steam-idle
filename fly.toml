@@ -4,9 +4,6 @@ primary_region = "fra"
 [build]
   dockerfile = "Dockerfile"
 
-# Секреты задай через:
-#   fly secrets set STEAM_ACCOUNT=логин STEAM_PASSWORD=пароль
-
 [[vm]]
   memory = "256mb"
   cpu_kind = "shared"
@@ -14,9 +11,3 @@ primary_region = "fra"
 
 [deploy]
   strategy = "immediate"
-
-# Персистентное хранилище для ssfn.json (loginKey)
-# Создать один раз: fly volumes create steam_data --region fra --size 1
-[mounts]
-  source = "steam_data"
-  destination = "/app/data"
