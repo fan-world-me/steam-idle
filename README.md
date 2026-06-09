@@ -1,22 +1,100 @@
 # steam-idle
 
-A simple Steam hour booster script using `steam-user`.
+Накрутчик часов Steam. Автоматически **паузит** когда ты сам играешь, возобновляет когда закрываешь игру.
 
-## What it does
-The script logs into your Steam account and idles two games at once:
-- Dota 2 (`570`)
-- CS2 (`730`)
+## Быстрый старт (локально)
 
-## Setup
-1. Create a local `steam-auth.json` file with your Steam login and password.
-2. Install dependencies:
-   ```bash
-   npm install
+1. Скопируй `steam-auth.example.json` → `steam-auth.json` и заполни:
+   ```json
+   {
+     "accountName": "логин",
+     "password": "пароль",
+     "games": [570, 730]
+   }
    ```
-3. Start the bot:
-   ```bash
-   npm start
-   ```
+2. `npm install`
+3. `npm start`  
+   При первом запуске введёшь код Steam Guard — после этого он больше не нужен.
 
-## License
-This project is licensed under **GPL-3.0-only**. See the [LICENSE](LICENSE) file for details.
+---
+
+## Деплой на Fly.io (бесплатно, 24/7)
+
+### 1. Установить flyctl
+```bash
+# macOS/Linux
+curl -L https://fly.io/install.sh | sh
+
+# Windows (PowerShell)
+iwr https://fly.io/install.ps1 -useb | iex
+```
+
+### 2. Войти / зарегистрироваться
+```bash
+fly auth login
+```
+
+### 3. Первый запуск (один раз локально для Steam Guard)
+```bash
+npm install
+npm start
+# Введи код Steam Guard → нажми Ctrl+C после "Ключ входа сохранён"
+```
+
+### 4. Задеплоить
+
+```bash
+cd steam-idle
+fly launch --name steam-idle --region fra --no-deploy
+```
+
+Задать секреты (вместо steam-auth.json на сервере):
+```bash
+fly secrets set STEAM_ACCOUNT=твой_логин STEAM_PASSWORD=твой_пароль
+```
+
+Загрузить `ssfn.json` (ключ Steam Guard) на сервер:
+```bash
+fly ssh console
+# или через volume — см. ниже
+```
+
+Деплой:
+```bash
+fly deploy
+```
+
+### 5. Проверить что работает
+```bash
+fly logs
+```
+
+### Сохранение ssfn.json между деплоями (Volume)
+
+Чтобы не вводить Steam Guard после каждого деплоя:
+```bash
+fly volumes create steam_data --region fra --size 1
+```
+
+В `fly.toml` добавить:
+```toml
+[mounts]
+  source = "steam_data"
+  destination = "/app/data"
+```
+
+И в `index.js` изменить путь к ssfn:
+```js
+const ssfnPath = path.join('/app/data', 'ssfn.json');
+```
+
+---
+
+## Переменные окружения
+
+| Переменная      | Описание                        |
+|-----------------|---------------------------------|
+| `STEAM_ACCOUNT` | Логин Steam                     |
+| `STEAM_PASSWORD`| Пароль Steam                    |
+
+Список игр задаётся в `steam-auth.json` → поле `"games"`.
