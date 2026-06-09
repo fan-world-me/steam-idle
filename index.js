@@ -28,16 +28,26 @@ const loginOptions = {
 const gamesToIdle = config.games || [570, 730];
 
 // Сохранённый ключ входа (чтобы не вводить Steam Guard каждый раз)
-// На сервере (Fly.io) используем /app/data — персистентный volume
-// Локально — рядом со скриптом
-const dataDir = process.env.DATA_DIR ||
-    (fs.existsSync('/app/data') ? '/app/data' : __dirname);
-const ssfnPath = path.join(dataDir, 'ssfn.json');
-if (fs.existsSync(ssfnPath)) {
+// Приоритет: SSFN_DATA (env, base64) → ssfn.json файл рядом
+const ssfnPath = path.join(__dirname, 'ssfn.json');
+
+if (process.env.SSFN_DATA) {
+    // На сервере: храним ssfn.json как base64 в переменной окружения
+    try {
+        const saved = JSON.parse(Buffer.from(process.env.SSFN_DATA, 'base64').toString('utf8'));
+        loginOptions.machineName = saved.machineName;
+        loginOptions.loginKey = saved.loginKey;
+        delete loginOptions.password;
+        log('loginKey загружен из SSFN_DATA');
+    } catch (e) {
+        log('[WARN] SSFN_DATA задан но не удалось прочитать: ' + e.message);
+    }
+} else if (fs.existsSync(ssfnPath)) {
+    // Локально: читаем из файла
     const saved = JSON.parse(fs.readFileSync(ssfnPath, 'utf8'));
     loginOptions.machineName = saved.machineName;
     loginOptions.loginKey = saved.loginKey;
-    delete loginOptions.password; // loginKey заменяет пароль
+    delete loginOptions.password;
 }
 
 // ФИКС: проверяем после загрузки ssfn.json — loginKey тоже считается валидными данными
