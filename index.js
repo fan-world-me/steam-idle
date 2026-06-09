@@ -87,12 +87,16 @@ client.on('steamGuard', (domain, callback) => {
 
     const readline = require('readline');
     const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
-    const prompt = domain
-        ? 'Введи код из письма на ' + domain + ': '
-        : 'Введи код из приложения Steam Guard: ';
+    let prompt;
+    if (domain) {
+        prompt = 'Введи код из письма на ' + domain + ': ';
+    } else {
+        prompt = 'Введи код из Steam Guard (или просто Enter если подтверждаешь в приложении на телефоне): ';
+    }
     rl.question(prompt, (code) => {
         rl.close();
-        callback(code);
+        // Пустой код = ждём подтверждения в мобильном приложении Steam
+        callback(code.trim());
     });
 });
 
@@ -119,16 +123,18 @@ client.on('loggedOn', () => {
 });
 
 // Срабатывает когда ты сам начинаешь/заканчиваешь играть на своём ПК
+// Steam шлёт blocked=false при каждом входе — реагируем только на реальное изменение состояния
 client.on('playingState', (blocked, playingApp) => {
-    if (blocked) {
+    if (blocked && !isBlocked) {
         log('Ты играешь на своём ПК (appid=' + playingApp + ') — накрутка приостановлена');
         isBlocked = true;
         client.gamesPlayed([]); // снимаем чтобы не было конфликта и переподключений
-    } else {
+    } else if (!blocked && isBlocked) {
         log('Ты закрыл игру на ПК — возобновляю накрутку');
         isBlocked = false;
         startIdling();
     }
+    // blocked=false при входе и isBlocked=false → игнорируем (Steam шлёт это всегда при логине)
 });
 
 // ФИКС: если loginKey протухнул — восстанавливаем пароль и удаляем мёртвый ключ
