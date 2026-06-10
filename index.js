@@ -64,13 +64,18 @@ function log(msg) {
 
 function scheduleReconnect() {
     if (reconnectTimeout) clearTimeout(reconnectTimeout);
+    // Когда пользователь играет — не мешаем: ждём 30 минут прежде чем переподключиться
+    const delay = isBlocked ? 30 * 60 * 1000 : reconnectDelay;
+    const label = isBlocked
+        ? '30 мин (ты играешь — не мешаю)'
+        : reconnectDelay / 1000 + 'с';
+    log('Переподключусь через ' + label);
     reconnectTimeout = setTimeout(() => {
         reconnectTimeout = null;
-        log('Переподключаюсь... (задержка была ' + reconnectDelay / 1000 + 'с)');
-        // Экспоненциальный backoff: увеличиваем задержку при повторных ошибках
+        log('Переподключаюсь...');
         reconnectDelay = Math.min(reconnectDelay * 2, MAX_RECONNECT_DELAY);
         client.logOn(loginOptions);
-    }, reconnectDelay);
+    }, delay);
 }
 
 function startIdling() {
