@@ -9,6 +9,8 @@ let reconnectDelay = 5000;    // начинаем с 5 сек
 const MAX_RECONNECT_DELAY = 60000; // не чаще раза в минуту при повторных ошибках
 let retryIdleTimeout = null;  // повтор попытки накрутки если пауза не снялась сама
 let kickedByUser = false;     // флаг: нас выбил живой пользователь — долго не лезем
+let kickedDelay = 5 * 60 * 1000; // первая попытка через 5 мин, потом 10 мин
+const MAX_KICKED_DELAY = 10 * 60 * 1000;
 
 // Конфиг: читаем из steam-auth.json или переменных окружения
 const configPath = path.join(__dirname, 'steam-auth.json');
@@ -65,15 +67,15 @@ function log(msg) {
 
 function scheduleReconnect() {
     if (reconnectTimeout) clearTimeout(reconnectTimeout);
-    // Если нас выбил живой пользователь — не мешаем 30 минут
-    const delay = kickedByUser ? 30 * 60 * 1000 : reconnectDelay;
+    // Если нас выбил живой пользователь — уступаем с нарастающей задержкой (5→10 мин)
+    const delay = kickedByUser ? kickedDelay : reconnectDelay;
     const label = kickedByUser
-        ? '30 мин (уступаю сессию тебе)'
+        ? kickedDelay / 60000 + ' мин (уступаю сессию тебе)'
         : reconnectDelay / 1000 + 'с';
     log('Переподключусь через ' + label);
     reconnectTimeout = setTimeout(() => {
         reconnectTimeout = null;
-        kickedByUser = false;
+        if (kickedByUser) kickedDelay = Math.min(kickedDelay * 2, MAX_KICKED_DELAY);
         log('Переподключаюсь...');
         reconnectDelay = Math.min(reconnectDelay * 2, MAX_RECONNECT_DELAY);
         client.logOn(loginOptions);
@@ -158,7 +160,9 @@ client.on('loggedOn', () => {
         clearTimeout(reconnectTimeout);
         reconnectTimeout = null;
     }
-    reconnectDelay = 5000; // сброс backoff после успешного входа
+    reconnectDelay = 5000;          // сброс backoff после успешного входа
+    kickedByUser = false;
+    kickedDelay = 5 * 60 * 1000;   // сброс до 5 мин на следующий раз
     log('Залогинился успешно!');
     startIdling();
 });
