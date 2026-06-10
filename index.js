@@ -8,6 +8,7 @@ let isBlocked = false;
 let reconnectDelay = 5000;    // начинаем с 5 сек
 const MAX_RECONNECT_DELAY = 60000; // не чаще раза в минуту при повторных ошибках
 let retryIdleTimeout = null;  // повтор попытки накрутки если пауза не снялась сама
+let kickedByUser = false;     // флаг: нас выбил живой пользователь — долго не лезем
 
 // Конфиг: читаем из steam-auth.json или переменных окружения
 const configPath = path.join(__dirname, 'steam-auth.json');
@@ -64,14 +65,15 @@ function log(msg) {
 
 function scheduleReconnect() {
     if (reconnectTimeout) clearTimeout(reconnectTimeout);
-    // Когда пользователь играет — не мешаем: ждём 30 минут прежде чем переподключиться
-    const delay = isBlocked ? 30 * 60 * 1000 : reconnectDelay;
-    const label = isBlocked
-        ? '30 мин (ты играешь — не мешаю)'
+    // Если нас выбил живой пользователь — не мешаем 30 минут
+    const delay = kickedByUser ? 30 * 60 * 1000 : reconnectDelay;
+    const label = kickedByUser
+        ? '30 мин (уступаю сессию тебе)'
         : reconnectDelay / 1000 + 'с';
     log('Переподключусь через ' + label);
     reconnectTimeout = setTimeout(() => {
         reconnectTimeout = null;
+        kickedByUser = false;
         log('Переподключаюсь...');
         reconnectDelay = Math.min(reconnectDelay * 2, MAX_RECONNECT_DELAY);
         client.logOn(loginOptions);
@@ -180,6 +182,13 @@ client.on('playingState', (blocked, playingApp) => {
 // ФИКС: если loginKey протухнул — восстанавливаем пароль и удаляем мёртвый ключ
 client.on('error', (err) => {
     log('Ошибка: ' + err.message);
+
+    if (err.eresult === SteamUser.EResult.LoggedInElsewhere) {
+        // Нас выбил живой пользователь — уступаем сессию на 30 минут
+        kickedByUser = true;
+        isBlocked = true;
+        log('Уступаю сессию — переподключусь через 30 минут');
+    }
 
     const isExpiredKey =
         err.eresult === SteamUser.EResult.InvalidPassword ||
