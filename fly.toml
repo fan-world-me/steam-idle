@@ -1,23 +1,17 @@
-app = "steam-idle-yarik"
-primary_region = "fra"
+app = 'steam-idle-yarik'
+primary_region = 'fra'
 
 [build]
-  dockerfile = "Dockerfile"
-
-# Volume для хранения ssfn.json между деплоями
-[mounts]
-  source = "steam_data"
-  destination = "/data"
+  dockerfile = 'Dockerfile'
 
 [[vm]]
-  memory = "256mb"
-  cpu_kind = "shared"
+  memory = '256mb'
+  cpu_kind = 'shared'
   cpus = 1
 
 [deploy]
-  strategy = "immediate"
+  strategy = 'immediate'
 
-# Healthcheck через HTTP — Fly.io будет проверять что бот живой
 [http_service]
   internal_port = 3000
   force_https = false
@@ -26,8 +20,8 @@ primary_region = "fra"
   min_machines_running = 1
 
   [[http_service.checks]]
-    grace_period = "10s"
-    interval = "30s"
-    method = "GET"
-    timeout = "5s"
-    path = "/healthz"
+    grace_period = '10s'
+    interval = '30s'
+    method = 'GET'
+    timeout = '5s'
+    path = '/healthz'
