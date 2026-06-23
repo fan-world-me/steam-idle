@@ -1,100 +1,97 @@
-# steam-idle
+# Steam Idle v2
 
-Накрутчик часов Steam. Автоматически **паузит** когда ты сам играешь, возобновляет когда закрываешь игру.
+Накручивает часы в Steam. Паузит когда ты сам заходишь в игру. Не мешает твоей сессии.
 
-## Быстрый старт (локально)
+## Что изменилось по сравнению со старой версией
 
-1. Скопируй `steam-auth.example.json` → `steam-auth.json` и заполни:
-   ```json
-   {
-     "accountName": "логин",
-     "password": "пароль",
-     "games": [570, 730]
-   }
-   ```
-2. `npm install`
-3. `npm start`  
-   При первом запуске введёшь код Steam Guard — после этого он больше не нужен.
+- **Сессия сохраняется на Fly.io** — `ssfn.json` хранится на volume `/data`, не сбрасывается при деплое
+- **Не выбивает тебя** — когда ты заходишь в Steam, бот ждёт **4 часа** (раньше 5-10 минут) перед попыткой переподключиться
+- **Ручное управление** — HTTP-эндпоинты `/resume` и `/pause`
+- **Healthcheck** — Fly.io проверяет что бот живой
 
----
+## Первый запуск (локально — нужен для Steam Guard)
 
-## Деплой на Fly.io (бесплатно, 24/7)
-
-### 1. Установить flyctl
-```bash
-# macOS/Linux
-curl -L https://fly.io/install.sh | sh
-
-# Windows (PowerShell)
-iwr https://fly.io/install.ps1 -useb | iex
-```
-
-### 2. Войти / зарегистрироваться
-```bash
-fly auth login
-```
-
-### 3. Первый запуск (один раз локально для Steam Guard)
 ```bash
 npm install
-npm start
-# Введи код Steam Guard → нажми Ctrl+C после "Ключ входа сохранён"
+node index.js
 ```
 
-### 4. Задеплоить
+Введи Steam Guard код когда попросит. После сообщения **"Ключ входа сохранён"** — можно деплоить.
 
-```bash
-cd steam-idle
-fly launch --name steam-idle --region fra --no-deploy
-```
+## Деплой на Fly.io
 
-Задать секреты (вместо steam-auth.json на сервере):
-```bash
-fly secrets set STEAM_ACCOUNT=твой_логин STEAM_PASSWORD=твой_пароль
-```
+### 1. Создать volume для хранения сессии
 
-Загрузить `ssfn.json` (ключ Steam Guard) на сервер:
-```bash
-fly ssh console
-# или через volume — см. ниже
-```
-
-Деплой:
-```bash
-fly deploy
-```
-
-### 5. Проверить что работает
-```bash
-fly logs
-```
-
-### Сохранение ssfn.json между деплоями (Volume)
-
-Чтобы не вводить Steam Guard после каждого деплоя:
 ```bash
 fly volumes create steam_data --region fra --size 1
 ```
 
-В `fly.toml` добавить:
-```toml
-[mounts]
-  source = "steam_data"
-  destination = "/app/data"
+### 2. Задать переменные окружения
+
+```bash
+fly secrets set STEAM_ACCOUNT=твой_логин
+fly secrets set STEAM_PASSWORD=твой_пароль
 ```
 
-И в `index.js` изменить путь к ssfn:
-```js
-const ssfnPath = path.join('/app/data', 'ssfn.json');
+Если хочешь накручивать другие игры (по умолчанию Dota 2 + CS2):
+```bash
+fly secrets set STEAM_GAMES=570,730,440
 ```
 
----
+### 3. Задеплоить
+
+```bash
+fly deploy
+```
+
+### 4. Скопировать ssfn.json на volume после первого деплоя
+
+После первого деплоя (если уже запускал локально и есть `ssfn.json`):
+```bash
+fly ssh console
+# внутри контейнера:
+cp /app/ssfn.json /data/ssfn.json
+exit
+```
+
+Или — скопируй строку **SSFN_DATA** из логов первого локального запуска и задай как секрет:
+```bash
+fly secrets set SSFN_DATA=<строка из логов>
+```
+
+## HTTP-эндпоинты
+
+| Метод | URL | Что делает |
+|-------|-----|------------|
+| GET | `/status` | Текущее состояние бота |
+| GET | `/healthz` | Healthcheck |
+| POST | `/resume` | Немедленно переподключиться (после того как закончил играть) |
+| POST | `/pause` | Остановить накрутку |
+
+Пример:
+```bash
+# посмотреть состояние
+curl https://steam-idle-yarik.fly.dev/status
+
+# когда закончил играть — разбудить бота не ждя 4 часа
+curl -X POST https://steam-idle-yarik.fly.dev/resume
+```
 
 ## Переменные окружения
 
-| Переменная      | Описание                        |
-|-----------------|---------------------------------|
-| `STEAM_ACCOUNT` | Логин Steam                     |
-| `STEAM_PASSWORD`| Пароль Steam                    |
+| Переменная | Описание | По умолчанию |
+|-----------|---------|--------------|
+| `STEAM_ACCOUNT` | Логин Steam | — |
+| `STEAM_PASSWORD` | Пароль Steam | — |
+| `STEAM_GAMES` | AppID через запятую | `570,730` |
+| `SSFN_DATA` | loginKey в base64 (альтернатива volume) | — |
+| `KICKED_RECONNECT_HOURS` | Сколько часов ждать после кика | `4` |
+| `DATA_DIR` | Где хранить ssfn.json | `/data` (Fly) / папка скрипта (локально) |
+| `PORT` | Порт HTTP сервера | `3000` |
 
-Список игр задаётся в `steam-auth.json` → поле `"games"`.
+## Как работает защита от кика
+
+1. Ты заходишь в Steam → бот получает `LoggedInElsewhere`
+2. Бот **ждёт 4 часа** и не лезет обратно
+3. Когда закончил — отправь `POST /resume` (или подожди 4 часа)
+4. Бот переподключается и возобновляет накрутку
