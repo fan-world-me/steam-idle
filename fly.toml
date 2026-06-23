@@ -4,6 +4,11 @@ primary_region = "fra"
 [build]
   dockerfile = "Dockerfile"
 
+# Volume для хранения ssfn.json между деплоями
+[mounts]
+  source = "steam_data"
+  destination = "/data"
+
 [[vm]]
   memory = "256mb"
   cpu_kind = "shared"
@@ -11,3 +16,18 @@ primary_region = "fra"
 
 [deploy]
   strategy = "immediate"
+
+# Healthcheck через HTTP — Fly.io будет проверять что бот живой
+[http_service]
+  internal_port = 3000
+  force_https = false
+  auto_stop_machines = false
+  auto_start_machines = false
+  min_machines_running = 1
+
+  [[http_service.checks]]
+    grace_period = "10s"
+    interval = "30s"
+    method = "GET"
+    timeout = "5s"
+    path = "/healthz"
