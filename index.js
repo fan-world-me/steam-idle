@@ -186,10 +186,6 @@ client.on('loginKey', (key) => {
     loginOptions.loginKey = key;
     loginOptions.machineName = 'steam-idle';
     delete loginOptions.password;
-    const b64 = Buffer.from(JSON.stringify(data)).toString('base64');
-    log('Ключ обновлён. Новый SSFN_DATA:');
-    log(b64);
-    log('Обнови на Fly.io: fly secrets set SSFN_DATA=' + b64);
 });
 
 client.on('loggedOn', () => {
