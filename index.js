@@ -21,8 +21,8 @@ const loginOptions = {
 };
 
 const gamesToIdle = (process.env.STEAM_GAMES
-    ? process.env.STEAM_GAMES.split(',').map(Number)
-    : null) || config.games || [570, 730];
+    ? process.env.STEAM_GAMES.split(',').map(Number).filter(n => !isNaN(n))
+    : null) || config.games || [570, 730, 1422450]; // Dota 2, CS2, Deadlock
 
 const KICKED_HOURS = parseFloat(process.env.KICKED_RECONNECT_HOURS || '4');
 const KICKED_RECONNECT_DELAY = KICKED_HOURS * 60 * 60 * 1000;

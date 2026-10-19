@@ -2,6 +2,8 @@
 
 Накручивает часы в Steam. Паузит когда ты сам заходишь в игру. Не мешает твоей сессии.
 
+По умолчанию накручивает **Dota 2 (570)**, **CS2 (730)** и **Deadlock (1422450)**.
+
 ## Что изменилось по сравнению со старой версией
 
 - **Сессия сохраняется на Fly.io** — `ssfn.json` хранится на volume `/data`, не сбрасывается при деплое
@@ -33,9 +35,9 @@ fly secrets set STEAM_ACCOUNT=твой_логин
 fly secrets set STEAM_PASSWORD=твой_пароль
 ```
 
-Если хочешь накручивать другие игры (по умолчанию Dota 2 + CS2):
+Если хочешь накручивать другие игры (по умолчанию Dota 2 + CS2 + Deadlock):
 ```bash
-fly secrets set STEAM_GAMES=570,730,440
+fly secrets set STEAM_GAMES=570,730,1422450,440
 ```
 
 ### 3. Задеплоить
@@ -83,7 +85,7 @@ curl -X POST https://steam-idle-yarik.fly.dev/resume
 |-----------|---------|--------------|
 | `STEAM_ACCOUNT` | Логин Steam | — |
 | `STEAM_PASSWORD` | Пароль Steam | — |
-| `STEAM_GAMES` | AppID через запятую | `570,730` |
+| `STEAM_GAMES` | AppID через запятую | `570,730,1422450` |
 | `SSFN_DATA` | loginKey в base64 (альтернатива volume) | — |
 | `KICKED_RECONNECT_HOURS` | Сколько часов ждать после кика | `4` |
 | `DATA_DIR` | Где хранить ssfn.json | `/data` (Fly) / папка скрипта (локально) |
